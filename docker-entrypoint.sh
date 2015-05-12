@@ -1,9 +1,13 @@
-git clone --depth 1 http://bitbucket.org/wuhl/dockerapp app
+git clone --depth 1 http://github.com/wuhl/dockerapp/ app
 
 cd app
 
-bundle install
+source "/usr/local/share/chruby/chruby.sh"
+chruby ruby
 
+gem install bundler
+
+bundle install
 bundle exec rake db:migrate
 
 if [[ $? != 0 ]]; then
@@ -14,5 +18,13 @@ if [[ $? != 0 ]]; then
   bundle exec rake db:migrate
 fi
 
-bundle exec rails server
+export SECRET_KEY_BASE=$(rake secret)
 
+sudo rm /etc/nginx/sites-enabled/*
+sudo ln -s /home/app/nginx.conf /etc/nginx/sites-enabled/app.conf
+
+sudo service nginx start
+
+bundle exec rake assets:precompile
+
+bundle exec puma -e production -b unix:///home/app/puma.sock
